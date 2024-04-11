@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contrl-dp
+  namespace: homework
+  labels:
+    app: contrl-dp
+spec:
+  replicas: 3
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: contrl-dp
+  template:
+    metadata:
+      labels:
+        app: contrl-dp
+    spec:
+      nodeSelector:
+        homework: "true"
+      containers:
+      - name: main-container
+        image: busybox:stable
+        command: ["sh", "-c", "httpd -fv -p 8000"]
+        workingDir: /homework
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: hw-volume
+          mountPath: /homework
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "rm -f /homework/index.html"]
+        readinessProbe:
+          exec:
+            command:
+            - ls
+            - /homework/index.html
+      initContainers:
+        - name: init-container
+          image: busybox:stable
+          volumeMounts:
+          - name: hw-volume
+            mountPath: "/init"
+          command: ["/bin/sh", "-c", 'echo "[Homework #2] Hello, World!" > /init/index.html']
+      volumes:
+        - name: hw-volume
+          emptyDir: {}
